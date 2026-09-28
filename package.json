@@ -1,0 +1,14 @@
+{
+  "name": "realityjs",
+  "version": "1.0.0",
+  "description": "Real-time Lake Tahoe shoreline in three.js",
+  "scripts": {
+    "dev": "python3 serve.py"
+  },
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "private": true
+}

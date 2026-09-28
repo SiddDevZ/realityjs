@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+.vercel
+# raw generator outputs and reference frames stay local (provenance is kept in tex/raw/PROVENANCE.md)
+tex/raw/*
+!tex/raw/PROVENANCE.md
+ref/
