@@ -152,14 +152,14 @@ vec3 rockAlbedo(vec3 p, vec3 N, float seed){
   // each boulder its own tone: some warm and pale, some cooler and darker
   // smooth grey granite: the crystal speckle softened toward its mean
   a = mix(a, vec3(dot(a, vec3(0.333))), 0.6);
-  a = mix(a, vec3(0.5), 0.35)*0.56;
+  a = mix(a, vec3(dot(a, vec3(0.333))), 0.5)*1.0;
   a *= (0.84 + 0.26*seed)*mix(vec3(1.0), vec3(1.02, 1.0, 0.97), fract(seed*7.0));
   // dark lichen crusts spread over the crowns, as on the photo's boulders
   float dk = smoothstep(0.48, 0.66, fbm(p.xz*0.9 + seed*13.0) + 0.25*(N.y - 0.5))*smoothstep(0.3, 0.8, N.y)*smoothstep(0.2, 0.7, p.y);
-  a = mix(a, a*0.42, dk*0.75);
+  a = mix(a, a*0.6, dk*0.3);
   // broad mottling at several scales, as sun and weather bleach granite unevenly
   float mo = fbm(p.xz*0.35 + seed*9.0)*0.6 + fbm(vec2(p.x + p.z, p.y)*1.3 + seed*3.0)*0.4;
-  a *= 0.82 + 0.36*mo;
+  a *= 0.9 + 0.2*mo;
   // pale grey-green lichen on the upward faces above the splash zone
   float li = smoothstep(0.62, 0.78, fbm(p.xz*2.1 + seed*5.0))*smoothstep(0.5, 0.9, N.y)*smoothstep(0.5, 1.0, p.y);
   a = mix(a, vec3(0.62, 0.64, 0.56), li*0.55);

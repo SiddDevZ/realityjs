@@ -6,3 +6,5 @@ granite: gpt-image-2 via mchat, 2026-09-28, seamless weathered Sierra granite to
 bark: gpt-image-2 via mchat, 2026-09-28, seamless jeffrey pine bark
 2026-09-28 gpt-image-2 via mchat: granite2 (Tahoe granite + lichen, seamless), pineA/pineB (Jeffrey pine cutouts,
 transparent, sun from left, alpha colour-bled), mtnA/mtnB (distant snowy range cutouts) composited into mountains.png.
+2026-09-28 gpt-image-2: granite3 (smooth grey Tahoe granite with dark weathering, seamless -> granite.jpg), pineC/pineD (sparse sunlit Jeffrey pines -> pineA/pineB)
+2026-09-28 gpt-image-2: pineE/pineF (wallpaper-style Jeffrey pines, text prompts only) -> pineA/pineB; granite4 rejected (too gravelly)

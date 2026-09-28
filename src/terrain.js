@@ -71,8 +71,9 @@ function boulderList() {
     }
   }
   // no rock top may sit just under the surface (pale shelf with a dark rim): push it under or above
-  for (const b of out) if (b[4] > -0.5 && b[4] < 0.3) { const d = (b[4] < -0.05 ? -0.55 : 0.35) - b[4]; b[4] += d; if (d < 0) b[5] = Math.max(b[5] + d, 0.3); }
-  return out.slice(0, NB);
+  // only rocks that break the surface: fully submerged ones read as dark blotches in open water
+  for (const b of out) if (b[4] > -0.5 && b[4] < 0.3) b[4] = 0.35;
+  return out.filter((b) => b[4] > 0.3).slice(0, NB);
 }
 
 const FS_BAKE = HEAD + /* glsl */ `

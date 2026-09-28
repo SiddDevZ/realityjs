@@ -9,7 +9,7 @@ export function buildTrees(scene, spots, maps, sunE) {
     const map = maps[s.k];
     const aspect = map.image ? map.image.width / map.image.height : 0.5;
     const mat = new THREE.ShaderMaterial({
-      uniforms: { uMap: { value: map }, uGain: { value: lum * 0.25 } },
+      uniforms: { uMap: { value: map }, uGain: { value: lum * 0.42 } },
       transparent: false, alphaToCoverage: true, side: THREE.DoubleSide,
       vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position, 1.0); }`,
       fragmentShader: `uniform sampler2D uMap; uniform float uGain; varying vec2 vUv;
@@ -20,7 +20,10 @@ export function buildTrees(scene, spots, maps, sunE) {
           vec3 c = pow(t.rgb, vec3(2.2))*uGain;
           // tame the photo's saturated orange trunk toward weathered cinnamon grey
           float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-          c = mix(vec3(l), c, 0.8);
+          c = mix(vec3(l), c, 0.7);
+          // needles toward the wallpaper's fresh green, the trunk stays bark
+          float needle = smoothstep(0.02, 0.1, t.g - t.r*0.8);
+          c *= mix(vec3(1.0), vec3(0.9, 0.96, 0.9), needle);
           c *= mix(vec3(0.9, 0.95, 1.08), vec3(1.0), smoothstep(0.05, 0.35, dot(t.rgb, vec3(0.333))));
           gl_FragColor = vec4(c, smoothstep(0.08, 0.6, t.a));
         }`,

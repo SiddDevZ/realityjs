@@ -57,7 +57,7 @@ const tex = (url, srgb) => {
 const shared = { uSunDir: { value: sunDir }, uSunE: { value: sunE } };
 const U = makeUniforms({
   ...shared, ...swell, ...ocean.uniforms(), ...terr.uniforms,
-  uGranite: { value: tex('tex/granite.jpg', true) },
+  uGranite: { value: tex('tex/granite.jpg?v=3', true) },
   uEnv: { value: env },
   uSand: { value: tex('tex/sand.jpg', true) },
   uSandN: { value: tex('tex/sand_n.png', false) },
@@ -91,7 +91,7 @@ scene.add(new THREE.HemisphereLight(0x8fb6ff, 0x9a9080, Math.PI * 0.06 * sunLum)
 const sunLight = new THREE.DirectionalLight(0xfff4e8, sunLum);
 sunLight.position.copy(sunDir).multiplyScalar(100);
 scene.add(sunLight);
-const trees = buildTrees(scene, [[31, 68, 16, 0], [35.5, 71.5, 12, 1], [40, 70, 9, 1]].map(([x, d, h, k]) => ({ x, d, h, k, y: terr.heightAt(x, d) })), [tex('tex/pineA.png', true), tex('tex/pineB.png', true)], sunE);
+const trees = buildTrees(scene, [[31, 68, 17, 0], [37.5, 68.5, 12, 1]].map(([x, d, h, k]) => ({ x, d, h, k, y: terr.heightAt(x, d) })), [tex('tex/pineA.png?v=3', true), tex('tex/pineB.png?v=3', true)], sunE);
 
 // camera: standing at the top of the swash, handheld; drag to look, wheel to crouch/stand
 const cam = { x: +(q.get('x') ?? 0), d: +(q.get('d') ?? -1.2), h: +(q.get('h') ?? 1.6), yaw: +(q.get('yaw') ?? 0), pitch: +(q.get('pitch') ?? -1) };
