@@ -19,7 +19,8 @@ float sponge(float d){ float s = clamp((d - SPONGE0)/(SPONGE1 - SPONGE0), 0.0, 1
 
 const FS_TERRAIN = SIM_HEAD + /* glsl */ `
 out vec4 o;
-void main(){ vec2 q = gl_FragCoord.xy; o = vec4(terrainB(cellXD(q)), 0.0, 0.0, 1.0); }
+// the sim's bed stops at 3 m: deeper water changes nothing for these short waves but breaks the explicit step
+void main(){ vec2 q = gl_FragCoord.xy; o = vec4(max(terrainB(cellXD(q)), -3.0), 0.0, 0.0, 1.0); }
 `;
 
 const FS_INIT = SIM_HEAD + /* glsl */ `
@@ -343,14 +344,14 @@ export class Surf {
 
 // incoming sea: a random, short-crested sea sampled from two spectra, random phases, so waves arrive in irregular sets with no fixed beat
 export function makeSwell(scale = 1) {
-  const H0 = -groundJS(0, 48);
+  const H0 = Math.min(3, -groundJS(0, 48));
   let seed = 424242;
   const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-9)) * Math.cos(2 * Math.PI * rnd());
   const seas = [
     // a lake on a breezy afternoon: short wind waves and a little leftover chop from across the lake
-    { n: 18, Tp: 2.6, Hs: 0.035, dir: 0.1, spread: 0.4 },
-    { n: 10, Tp: 1.8, Hs: 0.014, dir: -0.6, spread: 0.45 },
+    { n: 18, Tp: 2.8, Hs: 0.022, dir: 0.1, spread: 0.35 },
+    { n: 10, Tp: 2.0, Hs: 0.008, dir: -0.6, spread: 0.4 },
   ];
   const sw = [], ph = [];
   for (const sea of seas) {

@@ -63,10 +63,15 @@ function boulderList() {
     for (let i = 0; i < lobes; i++) {
       const a = rl() * Math.PI * 2, off = size * (0.35 + 0.35 * rl());
       const k = 0.45 + 0.35 * rl();
+      // a lobe top just under the surface reads as a pale shelf ringed in dark: keep tops clear of that band
+      let top = b[4] - b[5] * (0.12 + 0.35 * rl());
+      if (top > -0.5 && top < 0.3) top = top < -0.05 ? -0.55 : 0.35;
       out.push([b[0] + Math.cos(a) * off, b[1] + Math.sin(a) * off, b[2] * k, b[3] * k * (0.8 + 0.4 * rl()),
-        b[4] - b[5] * (0.12 + 0.35 * rl()), b[5] * k, rl() * 3]);
+        top, b[5] * k, rl() * 3]);
     }
   }
+  // no rock top may sit just under the surface (pale shelf with a dark rim): push it under or above
+  for (const b of out) if (b[4] > -0.5 && b[4] < 0.3) { const d = (b[4] < -0.05 ? -0.55 : 0.35) - b[4]; b[4] += d; if (d < 0) b[5] = Math.max(b[5] + d, 0.3); }
   return out.slice(0, NB);
 }
 
@@ -89,23 +94,22 @@ void main(){
     vec2 q = lp/A.zw;
     // irregular outline and lumpy skin: no two boulders the same
     // blocky, irregular footprint: a squarish superellipse, warped, never a clean circle
-    float pe = 3.0 + 2.8*fract(B.w*23.0);
+    float pe = 2.0 + 0.5*fract(B.w*23.0);
     vec2 aq = abs(q) + 1e-4;
     float r = pow(pow(aq.x, pe) + pow(aq.y, pe), 1.0/pe);
-    r *= 1.0 + 0.3*(vnoise(q*1.1 + B.w*17.0) - 0.5) + 0.08*(vnoise(q*3.3 + B.w*5.0) - 0.5);
+    r *= 1.0 + 0.14*(vnoise(q*1.1 + B.w*17.0) - 0.5) + 0.04*(vnoise(q*3.3 + B.w*5.0) - 0.5);
     if(r >= 1.0) continue;
     // weathered granite: broad flattened crown, rounded shoulders, a flared foot
-    float h = B.x - B.y + B.y*pow(max(1.0 - pow(r, 2.3), 0.0), 0.62);
+    float h = B.x - B.y + B.y*pow(max(1.0 - pow(r, 2.0), 0.0), 0.42);
     h += B.y*0.06*(vnoise(lp*0.9 + B.w*11.0) - 0.5) + B.y*0.03*(vnoise(lp*2.3 + B.w*3.0) - 0.5) + 0.02*(vnoise(lp*6.0 + B.w) - 0.5);
     // jointed granite: a few random planes cut the dome into flat faces with sharp edges
     float kr = 0.045*B.y + 0.03;
     #define SMIN(a, b) (min(a, b) - pow(max(kr - abs((a) - (b)), 0.0), 2.0)/(4.0*kr))
-    h = SMIN(h, B.x - B.y*(0.04 + 0.14*fract(B.w*41.0)));
-    for(int k=0;k<6;k++){
+    for(int k=0;k<1;k++){
       float fk = float(k);
       float ang = B.w*61.0 + fk*1.9 + 0.7*fract(B.w*(13.0 + fk));
       vec2 gdir = vec2(cos(ang), sin(ang));
-      float steep = mix(0.5, 1.8, fract(B.w*(7.0 + 3.0*fk)));
+      float steep = mix(0.25, 0.5, fract(B.w*(7.0 + 3.0*fk)));
       float off = mix(0.05, 0.6, fract(B.w*(19.0 + 5.0*fk)));
       float cut = B.x - B.y*0.06 - steep*(dot(lp/max(A.z, A.w), gdir) - off)*max(A.z, A.w)*0.9;
       h = SMIN(h, cut);
@@ -115,7 +119,7 @@ void main(){
     float j1 = abs(dot(lp, cd) - (fract(B.w*13.0) - 0.5)*A.z + 0.25*(vnoise(lp*1.3 + B.w*3.0) - 0.5));
     float j2 = abs(dot(lp, vec2(-cd.y, cd.x)) - (fract(B.w*29.0) - 0.5)*A.w + 0.2*(vnoise(lp*1.7 + B.w*9.0) - 0.5));
     float crack = max(1.0 - smoothstep(0.0, 0.05 + 0.03*B.y, j1), (1.0 - smoothstep(0.0, 0.035, j2))*step(0.55, fract(B.w*7.0)));
-    h -= crack*min(B.y*0.05, 0.06)*(fract(B.w*17.0) > 0.5 ? 1.0 : 0.0);
+    h -= crack*min(B.y*0.03, 0.03)*(fract(B.w*17.0) > 0.7 ? 1.0 : 0.0);
     if(h > best){ best = h; seed = B.w; }
   }
   float hgt = max(g, best);

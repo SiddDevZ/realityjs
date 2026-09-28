@@ -95,8 +95,8 @@ vec4 photoRange(sampler2D pano, sampler2D skyT, vec3 d){
   g = mix(g, vec3(pl), 0.25*smoothstep(0.5, 0.85, pl));
   vec3 m = g*hl/0.3;
   // 20 km of air: less contrast overall, a blue-grey veil thickening toward the base
-  float veil = 0.14 + 0.3*(1.0 - smoothstep(0.0, 0.03, el));
-  m = mix(m, hz*vec3(0.62, 0.72, 0.85), veil);
+  float veil = 0.1 + 0.22*(1.0 - smoothstep(0.0, 0.025, el));
+  m = mix(m*vec3(0.78, 0.86, 1.02), hz*vec3(0.42, 0.55, 0.78), veil);
   float a = smoothstep(0.05, 0.7, mc.a)*smoothstep(0.97, 0.9, pu.y);
   return vec4(m, a);
 }
@@ -237,7 +237,7 @@ export function bakeSky(gpu, sunDir, sunE) {
   return { env: rt.texture, sky: sky.texture, addRange };
 }
 
-const PANO = { W: 12288, H: 1024, AZ: 2.1, EL0: -0.006, EL1: 0.09 };
+const PANO = { W: 12288, H: 1024, AZ: 2.1, EL0: -0.006, EL1: 0.076 };
 export function bakeMountains(gpu, sunDir, sunE, skyTex) {
   const rt = gpu.target(PANO.W, PANO.H, { type: THREE.HalfFloatType, min: THREE.LinearFilter, mag: THREE.LinearFilter });
   const m = new THREE.RawShaderMaterial({

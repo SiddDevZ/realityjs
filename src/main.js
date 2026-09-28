@@ -43,7 +43,7 @@ const terr = bakeTerrain(gpu);
 
 const swell = makeSwell(+(q.get('surf') ?? 1));
 const surf = new Surf(gpu, { ...swell, ...terr.uniforms });
-const ocean = new Ocean(gpu, { wind: +(q.get('wind') ?? 1.7), fetch: 6000, windAngle: 0.35, chop: 0.35 });
+const ocean = new Ocean(gpu, { wind: +(q.get('wind') ?? 1.2), fetch: 5000, windAngle: 0.35, chop: 0.25 });
 
 const tl = new THREE.TextureLoader();
 const tex = (url, srgb) => {
@@ -72,7 +72,7 @@ const caustics = new Caustics(gpu, PHOTON_FS, U);
 U.uCaus.value = caustics.tex.texture;
 U.uCausDom.value = caustics.dom;
 
-const mtn = new THREE.TextureLoader().load('tex/mountains.webp?v=5');
+const mtn = new THREE.TextureLoader().load(q.has('nomtn') ? 'favicon.svg' : 'tex/mountains.webp?v=5');
 mtn.colorSpace = THREE.SRGBColorSpace;
 mtn.anisotropy = 8;
 mtn.generateMipmaps = false;
@@ -125,7 +125,7 @@ const grain = new ShaderPass({
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position, 1.0); }`,
   fragmentShader: `uniform sampler2D tDiffuse; uniform float uT; varying vec2 vUv;
     float h(vec2 p){ vec3 p3 = fract(vec3(p.xyx)*.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y)*p3.z); }
-    void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb; float l = dot(c, vec3(0.2126, 0.7152, 0.0722)); c = mix(vec3(l), c, 1.42); c = clamp((c - 0.5)*1.06 + 0.5, 0.0, 1.0); c += (h(gl_FragCoord.xy + fract(uT)*517.0) - 0.5)*0.012; gl_FragColor = vec4(c, 1.0); }`,
+    void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb; float l = dot(c, vec3(0.2126, 0.7152, 0.0722)); c = mix(vec3(l), c, 1.12); c = clamp((c - 0.5)*1.1 + 0.5, 0.0, 1.0); c = clamp((c - 0.5)*1.06 + 0.5, 0.0, 1.0); c += (h(gl_FragCoord.xy + fract(uT)*517.0) - 0.5)*0.012; gl_FragColor = vec4(c, 1.0); }`,
 });
 composer.addPass(grain);
 
@@ -228,6 +228,18 @@ window.__probe = () => {
     r.push(t + ':' + Array.from(b).map((v) => v.toFixed(3)).join(','));
   }
   return r.join(' | ');
+};
+window.__rows = () => {
+  const out = [];
+  const buf = new Float32Array(1024 * 4);
+  for (const d of [20, 30, 36, 40, 44, 48, 52, 55]) {
+    const j = Math.floor((d + 8) / 0.125);
+    renderer.readRenderTargetPixels(surf.surfA, 0, j, 1024, 1, buf);
+    let mx = -1e9, mn = 1e9, nan = 0;
+    for (let i = 0; i < 1024; i++) { const v = buf[i * 4]; if (!isFinite(v)) nan++; else { mx = Math.max(mx, v); mn = Math.min(mn, v); } }
+    out.push(`d=${d}: eta ${mn.toFixed(2)}..${mx.toFixed(2)} nan=${nan}`);
+  }
+  return out.join('\n');
 };
 window.__dbg = () => {
   const out = [];

@@ -150,11 +150,13 @@ vec3 rockAlbedo(vec3 p, vec3 N, float seed){
   vec3 a2 = texture(uGranite, p.zy/5.3 + 0.31).rgb*w.x + texture(uGranite, rxz/5.3 + 0.17).rgb*w.y + texture(uGranite, p.xy/5.3 + 0.53).rgb*w.z;
   vec3 a = mix(a1, a2, smoothstep(0.3, 0.7, vnoise(p.xz*0.23 + seed*7.0)));
   // each boulder its own tone: some warm and pale, some cooler and darker
-  a = mix(a, vec3(dot(a, vec3(0.333))), 0.2);
+  // smooth grey granite: the crystal speckle softened toward its mean
+  a = mix(a, vec3(dot(a, vec3(0.333))), 0.6);
+  a = mix(a, vec3(0.5), 0.35)*0.56;
   a *= (0.84 + 0.26*seed)*mix(vec3(1.0), vec3(1.02, 1.0, 0.97), fract(seed*7.0));
   // dark lichen crusts spread over the crowns, as on the photo's boulders
   float dk = smoothstep(0.48, 0.66, fbm(p.xz*0.9 + seed*13.0) + 0.25*(N.y - 0.5))*smoothstep(0.3, 0.8, N.y)*smoothstep(0.2, 0.7, p.y);
-  a = mix(a, a*0.55, dk*0.35);
+  a = mix(a, a*0.42, dk*0.75);
   // broad mottling at several scales, as sun and weather bleach granite unevenly
   float mo = fbm(p.xz*0.35 + seed*9.0)*0.6 + fbm(vec2(p.x + p.z, p.y)*1.3 + seed*3.0)*0.4;
   a *= 0.82 + 0.36*mo;
@@ -165,7 +167,7 @@ vec3 rockAlbedo(vec3 p, vec3 N, float seed){
   float streak = smoothstep(0.55, 0.8, vnoise(vec2((p.x - p.z)*1.8, p.y*0.25) + seed*7.0))*(1.0 - w.y);
   a *= 1.0 - 0.18*streak;
   // wet, darker band at the waterline and olive algae below it
-  a *= mix(vec3(1.0), vec3(0.92, 0.95, 0.9), smoothstep(-0.05, -0.6, p.y));
+  a *= mix(vec3(1.0), vec3(0.97, 0.99, 0.96), smoothstep(-0.05, -0.6, p.y));
   a *= mix(1.0, 0.68, smoothstep(0.28, 0.0, p.y)*step(-0.05, p.y));
   return a;
 }
@@ -298,11 +300,11 @@ void main(){
   vec4 wf = waterField(xd, b, true);
   float m = inside(xd);
   float depth = wf.y;
-  if(uDbg > 3.5){
+  if(abs(uDbg - 4.0) < 0.5){
     vec4 Ac = texCubic(uSurfA, simUV(xd));
     o = vec4(clamp(-Ac.x, 0.0, 1.0)*4.0, (Ac.x - b > 0.0) ? 4.0 : 0.0, clamp(b + 1.0, 0.0, 1.0)*4.0, 1.0); return;
   }
-  if(uDbg > 2.5){
+  if(abs(uDbg - 3.0) < 0.5){
     float fe; vec2 fg; farField(xd, b, fe, fg);
     bool bad = isnan(fe) || isinf(fe);
     o = vec4(bad ? vec3(30.0, 0.0, 30.0) : vec3(0.0, clamp(fe + 0.5, 0.0, 1.0)*4.0, clamp(wf.y, 0.0, 1.0)*4.0), 1.0); return;
@@ -331,7 +333,7 @@ void main(){
   vec2 cp = vec2(xd.x, -xd.y);
   vec2 r1 = texture(uDer2, (cp - vec2(flT.x, -flT.y))/0.8).xy, r2 = texture(uDer2, (cp - vec2(flT.z, -flT.w))/0.8 + 0.5).xy;
   float turb = m*(0.35 + 0.9*smoothstep(0.05, 0.9, mmT.r))*mix(0.35, 1.0, smoothstep(0.01, 0.08, depth))*smoothstep(0.0008, 0.004, depth);
-  sl += (r1*uFlowW.x + r2*uFlowW.y)*0.01*turb;
+  sl += (r1*uFlowW.x + r2*uFlowW.y)*0.005*turb;
   float ripAmt = m*mix(0.12, 1.0, smoothstep(0.03, 0.25, depth))*smoothstep(0.003, 0.02, depth)*(1.0 - smoothstep(0.3, 1.0, mmT.r*m));
   vec2 dxw0 = dFdx(xz), dyw0 = dFdy(xz);
   float fp0 = sqrt(max(dot(dxw0, dxw0), dot(dyw0, dyw0)));
@@ -339,7 +341,7 @@ void main(){
   // the visible surface keeps the ripples' shape but not every sun-facing facet (no white flecks);
   // the photons above use them at full strength for crisp caustics on the sand
   ripLost = 0.0072*smoothstep(0.004, 0.05, fp0)*m;
-  sl += randRipples(xz, uTime, 0.12)*ripAmt*0.09*(1.0 - smoothstep(0.02, 0.2, fp0));
+  sl += randRipples(xz, uTime, 0.12)*ripAmt*0.05*(1.0 - smoothstep(0.02, 0.2, fp0));
   vec3 N = normalize(vec3(-sl.x, 1.0, -sl.y));
   vec3 Ng = normalize(vec3(-simSl.x, 1.0, -simSl.y));
 
@@ -363,7 +365,8 @@ void main(){
   float alpha = sqrt(a2);
   vec3 refl = envL(R, clamp(log2(alpha*1.25/0.0061), 0.0, 7.0));
   float F = 0.02 + 0.98*pow(1.0 - NV, 5.0)/(1.0 + 6.0*a2);
-  vec3 spec = ggx(N, V, L, a2)*uSunE*0.07;
+  vec3 spec = ggx(N, V, L, a2)*uSunE*0.025;
+  if(uDbg > 5.5){ o = vec4(refl, 1.0); return; }
   spec *= mix(0.6, 1.0, smoothstep(0.02, 0.3, depth));
 
   // clear alpine water (caustic-volume's clear-pool coefficients, 1/m): red dies within metres, blue
@@ -371,14 +374,25 @@ void main(){
   vec3 sigA = vec3(0.475, 0.08, 0.032);
   vec3 sigS = vec3(0.005, 0.017, 0.044);
   vec3 sigT = sigA + sigS;
-  vec3 Tn = refract(-V, N, 0.75);
+  // look through the water with a calmed normal: tiny ripples no longer shred what lies below
+  vec3 Tn = refract(-V, normalize(mix(N, Ng, 0.75)), 0.75);
   float cosT = max(-Tn.y, 0.12);
   // refracted ray to the bed: one refinement so the bed we see and the water column we attenuate agree
-  vec2 bz1 = xz + Tn.xz*min(depth/cosT, 6.0);
-  float dBed = max(wf.x - terrainB(vec2(bz1.x, -bz1.y)), 0.0);
-  float dRay = 0.5*(depth + dBed);
-  float lView = dRay/cosT;
-  vec2 bz = xz + Tn.xz*min(lView, 6.0);
+  // march the refracted ray to where it really meets the bed, so a rock is seen where it is,
+  // not smeared into a pale ghost in front of it
+  vec3 P0 = vec3(xz.x, wf.x, xz.y);
+  float tMax = min(depth/cosT + 0.3, 9.0), tA = 0.0, tB = tMax;
+  bool hit = false;
+  for(int i=1;i<=14;i++){
+    float t = tMax*float(i)/14.0;
+    vec3 q = P0 + Tn*t;
+    if(q.y < terrainB(vec2(q.x, -q.z))){ tB = t; hit = true; break; }
+    tA = t;
+  }
+  if(hit){ for(int k=0;k<5;k++){ float tm = 0.5*(tA + tB); vec3 q = P0 + Tn*tm; if(q.y < terrainB(vec2(q.x, -q.z))) tB = tm; else tA = tm; } }
+  float lView = hit ? tB : tMax;
+  vec2 bz = (P0 + Tn*lView).xz;
+  float dRay = max(wf.x - terrainB(vec2(bz.x, -bz.y)), 0.0);
   vec3 Lw = normalize(refract(-L, vec3(0.0, 1.0, 0.0), 0.75));
   float lSun = dRay/max(-Lw.y, 0.2);
   vec3 Tview = exp(-sigT*lView), Tsun = exp(-sigT*lSun);
@@ -391,11 +405,17 @@ void main(){
   vec3 Nb = terrN(bxd);
   Nb = normalize(mix(sandNormal(bz, Nb, 0.25), Nb, binfo.g));
   float cz = causAt(bxd);
+  cz = mix(cz, 1.0, step(0.0, cz)*smoothstep(0.1, 0.6, binfo.g));
   cz = cz < 0.0 ? 1.0 : mix(1.0, 0.82 + 0.18*min(cz, 2.0), smoothstep(0.003, 0.03, depth));
-  float shB = (depth < 5.0 && dist < 25.0) ? mix(1.0, mix(0.82, 1.0, sunShadow(bp, Nb)), 1.0 - smoothstep(15.0, 25.0, dist)) : 1.0;
-  vec3 bott = groundAlbedo(bp, Nb, binfo)*vec3(0.73, 0.84, 0.84)*(uSunE*max(dot(Nb, -Lw), 0.0)*cz*shB/PI*Tsun + amb*0.95*(0.8 + 0.2*Nb.y));
+  float shB = (depth < 5.0 && dist < 25.0) ? mix(1.0, mix(0.995, 1.0, sunShadow(bp, Nb)), 1.0 - smoothstep(15.0, 25.0, dist)) : 1.0;
+  float bedL = mix(max(dot(Nb, -Lw), 0.0), 0.88 + 0.12*max(dot(Nb, -Lw), 0.0), binfo.g);
+  // seen through water, rock is a soft, smooth, slightly darker shape: no crystal speckle
+  // only a faint darkening of the sand where the actual rock body is
+  vec3 subRock = sandAlbedo(bp.xz)*vec3(0.22, 0.26, 0.3)*(0.96 + 0.08*vnoise(bp.xz*0.7 + binfo.b*9.0));
+  vec3 bedAlb = mix(sandAlbedo(bp.xz), subRock, smoothstep(0.1, 0.9, binfo.g));
+  vec3 bott = bedAlb*vec3(0.46, 0.6, 0.64)*(uSunE*bedL*cz*shB/PI*Tsun + amb*1.1*(0.85 + 0.15*Nb.y));
   vec3 Ein = uSunE*max(L.y, 0.0)/PI + amb;
-  vec3 Linf = sigS/sigT*Ein*0.5;
+  vec3 Linf = sigS/sigT*Ein*0.42;
   vec3 under = bott*Tview + Linf*(1.0 - Tview);
 
   // light through thin crests
@@ -408,15 +428,16 @@ void main(){
     refl = mix(refl, tr.rgb, tr.a*(1.0 - smoothstep(30.0, 45.0, dist)));
   }
 
+  if(abs(uDbg - 7.0) < 0.5){ o = vec4(under, 1.0); return; }
   // shallow film: surface effects fade in, so the waterline dissolves into the wet sand
   float film = smoothstep(0.0004, 0.006, depth);
-  float clear = mix(0.18, 0.6, smoothstep(0.5, 4.0, depth));
-  if(uDbg > 1.5){ o = vec4(vec3(F*4.0, film*4.0, clamp(depth/3.0, 0.0, 1.0)*4.0), 1.0); return; }
+  float clear = mix(0.12, 0.45, smoothstep(0.5, 4.0, depth));
+  if(abs(uDbg - 2.0) < 0.5){ o = vec4(vec3(F*4.0, film*4.0, clamp(depth/3.0, 0.0, 1.0)*4.0), 1.0); return; }
   vec3 col = under*(1.0 - F*film*clear) + (refl*F*clear + spec)*film;
 
   // foam: sim foam (bores, swash tips) + sparse fft whitecaps offshore, textured with flow-advected lace
   float fd = simFoam;
-  if(fd > 0.03){
+  if(fd > 0.03 && abs(uDbg - 8.0) > 0.5){
     vec4 fl = texture(uFlow, uvS)*m;
     float top = pow(clamp(Ng.y, 0.0, 1.0), 8.0);
     vec2 cTop = xd, cSide = vec2(xd.x, vW.y*1.6 + xd.y*0.25);
@@ -430,7 +451,7 @@ void main(){
     float lit = 0.35 + 0.65*max(dot(normalize(Ng + vec3(0.0, 0.5, 0.0)), L), 0.0);
     float ao = mix(1.0, 0.5 + 0.5*smoothstep(0.2, 0.8, wl), dense);
     vec3 foamCol = 0.85*ao*(uSunE*lit/PI + amb);
-    col = mix(col, foamCol, fa*film*0.12);
+    col = mix(col, foamCol, fa*film*0.04);
   }
 
   vec3 hd = normalize(vec3(-V.x, 0.0, -V.z) + vec3(0.0, 0.12, 0.0));
@@ -493,10 +514,11 @@ void main(){
   vec3 alb = groundAlbedo(vW, Nt, info);
   alb *= mix(1.0, mix(0.5, 1.0, rockW), wet)*mix(vec3(1.0), vec3(0.96, 0.97, 1.0), wet*(1.0 - rockW));
   vec3 amb = ambientL();
-  float sh = dist < 160.0 ? mix(0.5, 1.0, sunShadow(vW, Nt)) : 1.0;
+  // light, nearby-only rock shadows: the coarse march turns into jagged fragments further out
+  float sh = dist < 35.0 ? mix(1.0, mix(0.97, 1.0, sunShadow(vW, Nt)), 1.0 - smoothstep(20.0, 35.0, dist)) : 1.0;
   // crevices and the undersides of boulders see less sky
   float cav = rockW > 0.01 && dist < 90.0 ? rockCavity(xd, vW.y) : 0.0;
-  float ao = mix(1.0, (0.7 + 0.3*smoothstep(-0.3, 0.9, Nt.y))*clamp(1.0 + cav*1.4, 0.7, 1.1), rockW);
+  float ao = mix(1.0, (0.7 + 0.3*smoothstep(-0.3, 0.9, Nt.y))*clamp(1.0 + cav*0.2, 0.96, 1.02), rockW);
   vec3 bounce = uSunE*max(L.y, 0.0)*vec3(0.5, 0.47, 0.42)*(0.25 + 0.3*(1.0 - N.y))/PI;
   vec3 col = alb*(uSunE*max(dot(N, L), 0.0)*sh/PI + (amb*(0.7 + 0.3*N.y) + bounce)*ao);
   vN = Nt;
